@@ -30,5 +30,5 @@ export default defineConfig({
       }
     })
   ],
-  base: './' // for github pages
+  base: '/alphasift/' // Explicitly set for GitHub Pages deployment
 });
