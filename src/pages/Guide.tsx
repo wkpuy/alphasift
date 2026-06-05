@@ -100,8 +100,23 @@ export default function Guide() {
 
           <section className="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700">
             <div className="bg-slate-700/50 p-4 border-b border-slate-700 flex items-center">
+              <AlertCircle size={20} className="text-yellow-400 mr-2" />
+              <h2 className="font-bold">6. กฎเหล็กของเทรดเดอร์อาชีพ (Pro Trader Rules)</h2>
+            </div>
+            <div className="p-4 text-sm text-slate-300 space-y-3">
+              <p>ระบบของเราถูกอัปเกรดให้มี "เกราะป้องกัน" ตามมาตรฐานกองทุนระดับโลก เพื่อป้องกันพอร์ตแตกจากเหตุการณ์ไม่คาดฝัน:</p>
+              <ul className="list-disc list-inside space-y-2">
+                <li><strong className="text-white">กฎ 1% Risk Rule:</strong> เพื่อรักษาระดับ Drawdown ไม่ให้เกิน 6% ต่อเดือน คุณควรเลื่อนแถบความเสี่ยงไม่เกิน <strong>1.0% ถึง 1.5%</strong> ของพอร์ตต่อ 1 ไม้เสมอ</li>
+                <li><strong className="text-white">กฎเหรียญใหญ่ (Crypto Top 20):</strong> สแกนเนอร์จะค้นหาเฉพาะเหรียญ Top 20 ของโลกเท่านั้น ตัดเหรียญเล็ก/มีมออก เพื่อป้องกันปัญหาซื้อแล้วโดน Rug Pull ทิ้งดิ่งไม่ยอมกลับ</li>
+                <li><strong className="text-white">กฎห้ามถือข้ามสัปดาห์ (Friday Shield):</strong> สำหรับ Forex ระบบจะเตือนสีเหลืองทุกวันศุกร์ แนะนำให้หลีกเลี่ยงการเปิดออเดอร์ใหม่ เพื่อป้องกันกราฟกระโดด (Gap) เปิดวันจันทร์ทะลุ Stop Loss จากข่าวเสาร์-อาทิตย์</li>
+              </ul>
+            </div>
+          </section>
+
+          <section className="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700">
+            <div className="bg-slate-700/50 p-4 border-b border-slate-700 flex items-center">
               <BookOpen size={20} className="text-pink-400 mr-2" />
-              <h2 className="font-bold">6. อภิธานศัพท์การเทรด (Trading Glossary)</h2>
+              <h2 className="font-bold">7. อภิธานศัพท์การเทรด (Trading Glossary)</h2>
             </div>
             <div className="p-4 text-sm text-slate-300 space-y-3">
               <p>รวมคำศัพท์เทคนิคทั้งหมดที่ปรากฏอยู่ในแอปพลิเคชันนี้ เพื่อให้คุณเข้าใจความหมายและวิธีการใช้งาน</p>
