@@ -15,7 +15,7 @@ export default function Layout() {
           <div>
             <p className="text-[9px] text-slate-400 uppercase tracking-widest mb-0.5">Forex</p>
             <p className="text-xs font-bold text-blue-400 font-mono">
-              ${store.forexCapital.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+              ฿{store.forexCapital.toLocaleString(undefined, { minimumFractionDigits: 0 })}
             </p>
           </div>
           <div>
