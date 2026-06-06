@@ -40,3 +40,20 @@ export const useSettingsStore = create<SettingsState>()(
     }
   )
 );
+
+// --- Scanner Cache Store (In-Memory, survives route changes) ---
+interface ScannerState {
+  lastMode: 'Forex' | 'Crypto';
+  lastResults: any[];
+  setLastMode: (mode: 'Forex' | 'Crypto') => void;
+  setLastResults: (results: any[]) => void;
+  clearScannerCache: () => void;
+}
+
+export const useScannerStore = create<ScannerState>()((set) => ({
+  lastMode: 'Crypto',
+  lastResults: [],
+  setLastMode: (mode) => set({ lastMode: mode }),
+  setLastResults: (results) => set({ lastResults: results }),
+  clearScannerCache: () => set({ lastResults: [] })
+}));

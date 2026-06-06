@@ -5,7 +5,7 @@ import { scanCryptoPair, type CryptoSignal } from '../lib/scanner/crypto-strateg
 import { scanForexPair, type ForexSignal } from '../lib/scanner/forex-strategy';
 import { fetchUpcomingNews, getNewsWarningsForPair } from '../lib/api/forexfactory';
 import { getTopCryptoPairsByMarketCap } from '../lib/api/coingecko';
-import { useSettingsStore } from '../lib/store/useAppStore';
+import { useSettingsStore, useScannerStore } from '../lib/store/useAppStore';
 import EconomicCalendar from '../components/EconomicCalendar';
 import clsx from 'clsx';
 
@@ -13,9 +13,10 @@ import clsx from 'clsx';
 type ScannedSignal = (CryptoSignal | ForexSignal) & { newsWarnings?: string[] };
 
 export default function Scanner() {
-  const [mode, setMode] = useState<'Forex' | 'Crypto'>('Crypto');
+  const { lastMode, lastResults, setLastMode, setLastResults } = useScannerStore();
+  const [mode, setMode] = useState<'Forex' | 'Crypto'>(lastMode);
   const [isScanning, setIsScanning] = useState(false);
-  const [results, setResults] = useState<ScannedSignal[]>([]);
+  const [results, setResults] = useState<ScannedSignal[]>(lastResults);
   const [error, setError] = useState('');
   const tdToken = useSettingsStore(state => state.twelveDataToken);
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export default function Scanner() {
         const res = await Promise.all(promises);
         const validRes = res.filter(r => r !== null) as CryptoSignal[];
         setResults(validRes);
+        setLastResults(validRes);
       } else {
         if (!tdToken) {
           setError('TwelveData API Key is missing. Please add it in Settings.');
@@ -68,6 +70,7 @@ export default function Scanner() {
         }
         
         setResults(validRes);
+        setLastResults(validRes);
       }
     } catch (err: any) {
       setError(err.message || 'Error scanning pairs');
@@ -86,13 +89,13 @@ export default function Scanner() {
     <div className="p-4 space-y-6 animate-fade-in">
       <div className="flex p-1 bg-slate-800 rounded-lg">
         <button 
-          onClick={() => { setMode('Forex'); setResults([]); setError(''); }}
+          onClick={() => { setMode('Forex'); setLastMode('Forex'); setResults([]); setLastResults([]); setError(''); }}
           className={clsx("flex-1 py-2 text-sm font-medium rounded-md transition-all", mode === 'Forex' ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-white")}
         >
           Forex
         </button>
         <button 
-          onClick={() => { setMode('Crypto'); setResults([]); setError(''); }}
+          onClick={() => { setMode('Crypto'); setLastMode('Crypto'); setResults([]); setLastResults([]); setError(''); }}
           className={clsx("flex-1 py-2 text-sm font-medium rounded-md transition-all", mode === 'Crypto' ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-white")}
         >
           Crypto
