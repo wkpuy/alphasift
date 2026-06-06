@@ -9,7 +9,7 @@ export default function Layout() {
   return (
     <div className="max-w-[430px] mx-auto h-screen flex flex-col bg-darkBg border-x border-slate-800 relative">
       {/* Header */}
-      <header className="bg-cardBg p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 shadow-md">
+      <header className="bg-cardBg px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 shadow-md">
         <h1 className="text-xl font-bold font-mono tracking-tight text-blue-400">AlphaSift</h1>
         <div className="flex space-x-4 text-right">
           <div>
@@ -28,12 +28,12 @@ export default function Layout() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-[80px]">
+      <main className="flex-1 overflow-y-auto pb-[calc(80px+env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="bg-cardBg border-t border-slate-700 absolute bottom-0 w-full z-20 pb-safe">
+      <nav className="bg-cardBg border-t border-slate-700 absolute bottom-0 w-full z-20 pb-[env(safe-area-inset-bottom)]">
         <div className="flex justify-around items-center h-16 px-1">
           <NavItem to="/dashboard" icon={<PieChart size={20} />} label="Dashboard" />
           <NavItem to="/scanner" icon={<Radar size={20} />} label="Scanner" />
