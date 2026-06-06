@@ -329,13 +329,13 @@ export default function Journal() {
                             <span className="font-mono text-sm">{currentPrice?.toFixed(4) || 'Syncing...'}</span>
                             {t.status === 'active' && currentPrice && (
                               <span className={clsx("font-mono text-sm font-bold", floatingPnl >= 0 ? 'text-success' : 'text-danger')}>
-                                {floatingPnl >= 0 ? '+' : ''}{floatingPnl.toLocaleString(undefined, {maximumFractionDigits:0})}
+                                {floatingPnl >= 0 ? '+' : ''}{floatingPnl.toLocaleString(undefined, {maximumFractionDigits:0})} THB
                               </span>
                             )}
                           </div>
                         ) : (
                           <p className={clsx("font-mono text-lg font-bold mt-0.5", t.pnl >= 0 ? 'text-success' : 'text-danger')}>
-                            {t.pnl > 0 ? '+' : ''}{t.pnl.toLocaleString(undefined, {maximumFractionDigits:0})}
+                            {t.pnl > 0 ? '+' : ''}{t.pnl.toLocaleString(undefined, {maximumFractionDigits:0})} THB
                           </p>
                         )}
                       </div>

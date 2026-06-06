@@ -71,8 +71,11 @@ export default function Settings() {
 
   const handleClearCache = () => {
     localStorage.removeItem('api_cache');
-    toast.success('Cache cleared!');
+    toast.success('Cache cleared! Reloading...');
     setIsClearCacheModalOpen(false);
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
 
   return (
@@ -155,7 +158,7 @@ export default function Settings() {
 
         <button onClick={() => setIsClearCacheModalOpen(true)} className="w-full bg-danger/10 border border-danger/30 text-danger py-3 rounded-lg text-sm px-4 flex items-center hover:bg-danger/20 transition-colors mt-4">
           <Trash2 size={16} className="mr-3" />
-          <span>Force Clear Cache</span>
+          <span>Force Clear Cache & Reload</span>
         </button>
       </div>
 
