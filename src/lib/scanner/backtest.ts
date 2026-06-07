@@ -129,7 +129,7 @@ export function runBacktest(
       const pnl = tradeDirection === 'BUY' 
         ? (k.close - entryPrice) * positionSize 
         : (entryPrice - k.close) * positionSize;
-      currentEquity = capital + (pnl * (strategy === 'Forex' ? 34 : 34)); // Normalize roughly
+      currentEquity = capital + pnl; 
     }
     equityCurve.push({ time: timeStr, equity: currentEquity });
 
