@@ -7,6 +7,7 @@ import RiskCalculator from './pages/RiskCalculator';
 import Journal from './pages/Journal';
 import Guide from './pages/Guide';
 import Settings from './pages/Settings';
+import Backtest from './pages/Backtest';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="journal" element={<Journal />} />
           <Route path="guide" element={<Guide />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="backtest" element={<Backtest />} />
         </Route>
       </Routes>
     </HashRouter>

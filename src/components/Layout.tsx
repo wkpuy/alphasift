@@ -1,6 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useSettingsStore } from '../lib/store/useAppStore';
-import { PieChart, Radar, BookOpen, GraduationCap, Settings } from 'lucide-react';
+import { PieChart, Radar, BookOpen, GraduationCap, Settings, Activity } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function Layout() {
@@ -35,11 +35,12 @@ export default function Layout() {
       {/* Bottom Navigation */}
       <nav className="bg-cardBg border-t border-slate-700 absolute bottom-0 w-full z-20 pb-[env(safe-area-inset-bottom)]">
         <div className="flex justify-around items-center h-16 px-1">
-          <NavItem to="/dashboard" icon={<PieChart size={20} />} label="Dashboard" />
-          <NavItem to="/scanner" icon={<Radar size={20} />} label="Scanner" />
+          <NavItem to="/dashboard" icon={<PieChart size={20} />} label="Dash" />
+          <NavItem to="/scanner" icon={<Radar size={20} />} label="Scan" />
           <NavItem to="/journal" icon={<BookOpen size={20} />} label="Journal" />
+          <NavItem to="/backtest" icon={<Activity size={20} />} label="Test" />
           <NavItem to="/guide" icon={<GraduationCap size={20} />} label="Manual" />
-          <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" />
+          <NavItem to="/settings" icon={<Settings size={20} />} label="Set" />
         </div>
       </nav>
     </div>
