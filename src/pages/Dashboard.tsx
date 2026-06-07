@@ -9,16 +9,57 @@ export default function Dashboard() {
   const [mode, setMode] = useState<'Forex' | 'Crypto'>('Forex');
   const [trades, setTrades] = useState<Trade[]>([]);
   
+  const [equity, setEquity] = useState<number | null>(null);
+  
   const forexCapital = useSettingsStore(state => state.forexCapital);
   const cryptoCapital = useSettingsStore(state => state.cryptoCapital);
+  const tdToken = useSettingsStore(state => state.twelveDataToken);
+
+  const currentCapital = mode === 'Forex' ? forexCapital : cryptoCapital;
 
   useEffect(() => {
     loadTrades();
-  }, []);
+  }, [mode, currentCapital]);
 
   const loadTrades = async () => {
     const data = await getAllTrades();
     setTrades(data);
+
+    // Calculate Floating Equity
+    let totalFloating = 0;
+    const activeTrades = data.filter(t => t.status === 'active' && t.type === mode);
+    
+    if (activeTrades.length > 0) {
+       const promises = activeTrades.map(async (t) => {
+          let currentPrice = 0;
+          try {
+              if (t.type === 'Crypto') {
+                  const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${t.coin}`);
+                  const json = await res.json();
+                  currentPrice = parseFloat(json.price);
+              } else {
+                  if (tdToken) {
+                     const res = await fetch(`https://api.twelvedata.com/price?symbol=${t.coin}&apikey=${tdToken}`);
+                     const json = await res.json();
+                     if (json.price) currentPrice = parseFloat(json.price);
+                  }
+              }
+
+              if (currentPrice > 0) {
+                  let pnl = 0;
+                  if (t.direction === 'BUY') pnl = (currentPrice - t.entryPrice) * t.positionSize;
+                  else pnl = (t.entryPrice - currentPrice) * t.positionSize;
+                  totalFloating += (pnl * 34); // Convert USD PnL to THB
+              }
+          } catch (e) {
+              console.error('Failed to fetch price for', t.coin);
+          }
+       });
+       await Promise.all(promises);
+       setEquity(currentCapital + totalFloating);
+    } else {
+       setEquity(currentCapital);
+    }
   };
 
   // Filter and calculate
@@ -31,7 +72,6 @@ export default function Dashboard() {
   const totalTrades = closedTrades.length;
   const winRate = totalTrades > 0 ? Math.round((winTrades.length / totalTrades) * 100) : 0;
   const totalPnl = closedTrades.reduce((sum, t) => sum + t.pnl, 0);
-  const currentCapital = mode === 'Forex' ? forexCapital : cryptoCapital;
 
   // Prepare data for Line Chart (Cumulative PnL)
   let cumulative = 0;
@@ -80,13 +120,19 @@ export default function Dashboard() {
 
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
+          <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg relative overflow-hidden">
             <div className="flex items-center text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <Wallet size={14} className="mr-1"/> Balance
+              <Wallet size={14} className="mr-1"/> Equity (Live)
             </div>
-            <div className="text-xl font-black font-mono">
-              ฿{currentCapital.toLocaleString(undefined, {maximumFractionDigits: 0})}
+            <div className="text-xl font-black font-mono flex items-baseline gap-2">
+              ฿{equity !== null ? equity.toLocaleString(undefined, {maximumFractionDigits: 0}) : '...'}
+              {equity !== null && equity !== currentCapital && (
+                 <span className={clsx("text-xs", equity > currentCapital ? "text-success" : "text-danger")}>
+                    ({equity > currentCapital ? '+' : ''}{(equity - currentCapital).toLocaleString(undefined, {maximumFractionDigits: 0})})
+                 </span>
+              )}
             </div>
+            <div className="text-[10px] text-slate-500 mt-1 font-mono">Balance: ฿{currentCapital.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
           </div>
           
           <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">

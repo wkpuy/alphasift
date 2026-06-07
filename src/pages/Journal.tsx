@@ -293,7 +293,9 @@ export default function Journal() {
                       </div>
                       <div>
                         <p className="text-slate-500 mb-0.5">Take Profit</p>
-                        <p className="font-mono text-success font-medium">{t.takeProfit?.toFixed(4)}</p>
+                        <p className="font-mono text-success font-medium">
+                          {t.takeProfit === 0 ? 'Dynamic' : t.takeProfit?.toFixed(4)}
+                        </p>
                       </div>
                       <div>
                         <p className="text-slate-500 mb-0.5">Stop Loss</p>
