@@ -1,4 +1,4 @@
-import { calculateEMA, calculateRSI, calculateATR } from './indicators';
+import { calculateEMA, calculateRSI, calculateATR, calculateADX } from './indicators';
 import { fetchTwelveDataKlines, aggregateH4ToDaily } from '../api/twelvedata';
 
 export interface ForexSignal {
@@ -8,21 +8,24 @@ export interface ForexSignal {
   stopLoss: number;
   takeProfit: number;
   reasons: string[];
+  adxScore?: number;
+  rsiDepth?: number;
 }
 
 export async function scanForexPair(symbol: string, apiKey: string): Promise<ForexSignal> {
-  // Fetch 2000 H4 candles (~330 trading days) using only 1 API Credit
-  // This helps avoid TwelveData's 8 requests/minute Free Tier limit for 7 pairs.
   const hourlyKlines = await fetchTwelveDataKlines(symbol, '4h', 2000, apiKey);
   const dailyKlines = aggregateH4ToDaily(hourlyKlines);
   
   const dCloses = dailyKlines.map(k => k.close);
+  const dHighs = dailyKlines.map(k => k.high);
+  const dLows = dailyKlines.map(k => k.low);
   const hCloses = hourlyKlines.map(k => k.close);
   const hHighs = hourlyKlines.map(k => k.high);
   const hLows = hourlyKlines.map(k => k.low);
   
   const ema50D = calculateEMA(dCloses, 50);
   const ema200D = calculateEMA(dCloses, 200);
+  const adxD = calculateADX(dHighs, dLows, dCloses, 14);
   const rsi14H = calculateRSI(hCloses, 14);
   const atr14H = calculateATR(hHighs, hLows, hCloses, 14);
 
@@ -30,6 +33,7 @@ export async function scanForexPair(symbol: string, apiKey: string): Promise<For
   const currentDailyPrice = dCloses[lastD];
   const lEma50 = ema50D[lastD];
   const lEma200 = ema200D[lastD];
+  const lAdx = adxD[lastD];
   
   const lastH = hCloses.length - 1;
   const currentPrice = hCloses[lastH];
@@ -89,6 +93,8 @@ export async function scanForexPair(symbol: string, apiKey: string): Promise<For
     entryPrice: currentPrice,
     stopLoss,
     takeProfit,
-    reasons
+    reasons,
+    adxScore: lAdx !== null ? lAdx : undefined,
+    rsiDepth: lRsi14 !== null ? lRsi14 : undefined
   };
 }

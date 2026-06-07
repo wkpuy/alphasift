@@ -6,11 +6,19 @@ import { scanForexPair, type ForexSignal } from '../lib/scanner/forex-strategy';
 import { fetchUpcomingNews, getNewsWarningsForPair } from '../lib/api/forexfactory';
 import { getTopCryptoPairsByMarketCap } from '../lib/api/coingecko';
 import { useSettingsStore, useScannerStore } from '../lib/store/useAppStore';
+import { getAllTrades } from '../lib/storage/db';
 import EconomicCalendar from '../components/EconomicCalendar';
 import clsx from 'clsx';
 
 // Extend signal interfaces for UI display
-type ScannedSignal = (CryptoSignal | ForexSignal) & { newsWarnings?: string[] };
+type ScannedSignal = (CryptoSignal | ForexSignal) & { 
+  newsWarnings?: string[];
+  correlationWarning?: string;
+};
+
+// Groups for USD correlation
+const USD_BASE_PAIRS = ['EUR/USD', 'GBP/USD', 'AUD/USD', 'XAU/USD']; // Shorting USD means BUY these
+const USD_QUOTE_PAIRS = ['USD/JPY', 'USD/CHF', 'USD/CAD']; // Shorting USD means SELL these
 
 export default function Scanner() {
   const { lastMode, lastResults, setLastMode, setLastResults } = useScannerStore();
@@ -53,17 +61,41 @@ export default function Scanner() {
         const res = await Promise.all(promises);
         const validRes = res.filter(r => r !== null) as ScannedSignal[];
         
-        // Optimize: Only fetch news if we actually found a signal!
         const hasAnySignal = validRes.some(r => r.signal !== 'NONE');
         
         if (hasAnySignal) {
+          // 1. Fetch News Warnings
           const newsData = await fetchUpcomingNews();
-          // Inject news warnings only into pairs with an active signal
+          
+          // 2. Fetch Active Trades for Correlation Check
+          const activeTrades = (await getAllTrades()).filter(t => t.status === 'active' || t.status === 'pending');
+          const isShortUsd = activeTrades.some(t => 
+            (USD_BASE_PAIRS.includes(t.coin) && t.direction === 'BUY') || 
+            (USD_QUOTE_PAIRS.includes(t.coin) && t.direction === 'SELL')
+          );
+          const isLongUsd = activeTrades.some(t => 
+            (USD_BASE_PAIRS.includes(t.coin) && t.direction === 'SELL') || 
+            (USD_QUOTE_PAIRS.includes(t.coin) && t.direction === 'BUY')
+          );
+
           for (const signal of validRes) {
             if (signal.signal !== 'NONE') {
+              // Add News Warnings
               const warnings = getNewsWarningsForPair(signal.symbol, newsData);
               if (warnings.length > 0) {
                 signal.newsWarnings = warnings;
+              }
+
+              // Add Correlation Warnings
+              const signalShortsUsd = (USD_BASE_PAIRS.includes(signal.symbol) && signal.signal === 'BUY') || 
+                                      (USD_QUOTE_PAIRS.includes(signal.symbol) && signal.signal === 'SELL');
+              const signalLongsUsd = (USD_BASE_PAIRS.includes(signal.symbol) && signal.signal === 'SELL') || 
+                                     (USD_QUOTE_PAIRS.includes(signal.symbol) && signal.signal === 'BUY');
+              
+              if (signalShortsUsd && isShortUsd) {
+                signal.correlationWarning = "Correlation Risk: You already have positions betting on USD weakness. Taking this trade increases your exposure to USD recovery.";
+              } else if (signalLongsUsd && isLongUsd) {
+                signal.correlationWarning = "Correlation Risk: You already have positions betting on USD strength. Taking this trade increases your exposure to USD drops.";
               }
             }
           }
@@ -146,7 +178,15 @@ export default function Scanner() {
                 )}
                 
                 <div className="flex justify-between items-start mb-2">
-                  <h4 className={clsx("font-bold text-lg", hasSignal && "group-hover:text-blue-400 transition-colors")}>{res.symbol}</h4>
+                  <div>
+                    <h4 className={clsx("font-bold text-lg", hasSignal && "group-hover:text-blue-400 transition-colors")}>{res.symbol}</h4>
+                    {mode === 'Forex' && hasSignal && ('adxScore' in res) && res.adxScore && (
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        ADX Score: <span className={clsx("font-bold", res.adxScore > 25 ? "text-blue-400" : "text-slate-500")}>{res.adxScore.toFixed(1)}</span>
+                        {('rsiDepth' in res) && res.rsiDepth && <span className="ml-2">| RSI: {res.rsiDepth.toFixed(1)}</span>}
+                      </p>
+                    )}
+                  </div>
                   <span className={clsx(
                     "text-[10px] px-2 py-1 rounded font-mono border",
                     res.signal === 'BUY' ? "bg-success/20 text-success border-success/30" : 
@@ -169,17 +209,24 @@ export default function Scanner() {
                   })}
                 </div>
 
-                {/* News Warnings Injection */}
-                {res.newsWarnings && res.newsWarnings.length > 0 && (
-                  <div className="mt-3 space-y-1 animate-fade-in">
-                    {res.newsWarnings.map((w, idx) => (
-                      <div key={idx} className="bg-red-500/10 border border-red-500/30 rounded px-2 py-1.5 flex items-start text-xs text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-                        <span className="mr-1 mt-0.5">⚠️</span>
-                        <span>{w}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Warnings Section */}
+                <div className="mt-3 space-y-1 animate-fade-in">
+                  {/* Correlation Warning */}
+                  {res.correlationWarning && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1.5 flex items-start text-xs text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)] mb-1">
+                      <AlertCircle size={14} className="mr-1 mt-0.5 shrink-0" />
+                      <span>{res.correlationWarning}</span>
+                    </div>
+                  )}
+
+                  {/* News Warnings */}
+                  {res.newsWarnings && res.newsWarnings.length > 0 && res.newsWarnings.map((w, idx) => (
+                    <div key={idx} className="bg-red-500/10 border border-red-500/30 rounded px-2 py-1.5 flex items-start text-xs text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                      <span className="mr-1 mt-0.5">⚠️</span>
+                      <span>{w}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}
