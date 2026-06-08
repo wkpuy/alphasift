@@ -56,8 +56,13 @@ export async function scanForexPair(symbol: string, apiKey: string): Promise<For
   if (trend === 'UP') {
     if (lRsi14 !== null && prevRsi14 !== null) {
       if (prevRsi14 >= 35 && prevRsi14 <= 55 && lRsi14 > prevRsi14) {
-        reasons.push(`Signal: RSI(14) Hooked Up from ${prevRsi14.toFixed(1)} to ${lRsi14.toFixed(1)}`);
-        signal = 'BUY';
+        if (lAdx !== null && lAdx > 20) {
+          reasons.push(`Signal: RSI(14) Hooked Up from ${prevRsi14.toFixed(1)} to ${lRsi14.toFixed(1)}`);
+          reasons.push(`Trend Strength (ADX): ${lAdx.toFixed(1)} (> 20)`);
+          signal = 'BUY';
+        } else {
+          reasons.push(`Wait: ADX is ${lAdx?.toFixed(1)} (Need > 20 for Trend Strength)`);
+        }
       } else {
         reasons.push(`Wait: RSI(14) is ${lRsi14.toFixed(1)} (Need 35-55 Hook)`);
       }
@@ -65,8 +70,13 @@ export async function scanForexPair(symbol: string, apiKey: string): Promise<For
   } else if (trend === 'DOWN') {
     if (lRsi14 !== null && prevRsi14 !== null) {
       if (prevRsi14 >= 45 && prevRsi14 <= 65 && lRsi14 < prevRsi14) {
-        reasons.push(`Signal: RSI(14) Hooked Down from ${prevRsi14.toFixed(1)} to ${lRsi14.toFixed(1)}`);
-        signal = 'SELL';
+        if (lAdx !== null && lAdx > 20) {
+          reasons.push(`Signal: RSI(14) Hooked Down from ${prevRsi14.toFixed(1)} to ${lRsi14.toFixed(1)}`);
+          reasons.push(`Trend Strength (ADX): ${lAdx.toFixed(1)} (> 20)`);
+          signal = 'SELL';
+        } else {
+          reasons.push(`Wait: ADX is ${lAdx?.toFixed(1)} (Need > 20 for Trend Strength)`);
+        }
       } else {
         reasons.push(`Wait: RSI(14) is ${lRsi14.toFixed(1)} (Need 45-65 Hook)`);
       }

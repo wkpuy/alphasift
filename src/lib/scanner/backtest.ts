@@ -1,4 +1,4 @@
-import { calculateEMA, calculateRSI, calculateATR } from './indicators';
+import { calculateEMA, calculateRSI, calculateATR, calculateADX } from './indicators';
 import type { Kline } from '../api/binance';
 
 export interface BacktestResult {
@@ -143,6 +143,7 @@ export function runBacktest(
   const rsi14 = calculateRSI(closes, 14);
   const atr7 = calculateATR(highs, lows, closes, 7);
   const atr14 = calculateATR(highs, lows, closes, 14);
+  const adxD = calculateADX(highs, lows, closes, 14);
 
   // Start loop from index 200 (to ensure EMA200 is warm)
   for (let i = 200; i < klines.length; i++) {
@@ -192,11 +193,12 @@ export function runBacktest(
         const prevR14 = rsi14[i-1];
         const a14 = atr14[i];
 
-        if (e50 && e200 && r14 && prevR14 && a14) {
+        if (e50 && e200 && r14 && prevR14 && a14 && adxD) {
           const trendUp = cPrice > e50 && e50 > e200;
           const trendDown = cPrice < e50 && e50 < e200;
+          const hasTrendStrength = adxD[i] > 20;
 
-          if (trendUp && prevR14 >= 35 && prevR14 <= 55 && r14 > prevR14) {
+          if (trendUp && hasTrendStrength && prevR14 >= 35 && prevR14 <= 55 && r14 > prevR14) {
             inTrade = true;
             tradeDirection = 'BUY';
             entryPrice = cPrice;
@@ -207,7 +209,7 @@ export function runBacktest(
             riskAmount = capital * (riskPct / 100);
             positionSize = dist > 0 ? riskAmount / dist : 0;
           } 
-          else if (trendDown && prevR14 >= 45 && prevR14 <= 65 && r14 < prevR14) {
+          else if (trendDown && hasTrendStrength && prevR14 >= 45 && prevR14 <= 65 && r14 < prevR14) {
             inTrade = true;
             tradeDirection = 'SELL';
             entryPrice = cPrice;
