@@ -61,19 +61,46 @@ export function parseYahooCSV(csv: string): Kline[] {
   const lines = csv.trim().split('\n');
   const klines: Kline[] = [];
   
-  // Skip header (Date,Open,High,Low,Close,Adj Close,Volume)
+  let openIdx = 1;
+  let highIdx = 2;
+  let lowIdx = 3;
+  let closeIdx = 4;
+  let volIdx = 6;
+
+  // Find header row to map indices
+  for (let i = 0; i < 5 && i < lines.length; i++) {
+    const row = lines[i].toLowerCase();
+    if (row.includes('open') && row.includes('close')) {
+      const cols = row.split(',');
+      openIdx = cols.indexOf('open');
+      highIdx = cols.indexOf('high');
+      lowIdx = cols.indexOf('low');
+      closeIdx = cols.indexOf('close');
+      const v = cols.findIndex(c => c.includes('volume'));
+      if (v !== -1) volIdx = v;
+      break;
+    }
+  }
+
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',');
-    if (cols.length < 6) continue;
-    if (cols[1] === 'null') continue; // Skip days with no data
+    if (cols.length < 5) continue;
+    if (cols[1] === 'null' || cols[openIdx] === 'null') continue;
+
+    const open = parseFloat(cols[openIdx]);
+    const high = parseFloat(cols[highIdx]);
+    const low = parseFloat(cols[lowIdx]);
+    const close = parseFloat(cols[closeIdx]);
+    
+    if (isNaN(open) || isNaN(close)) continue;
 
     klines.push({
       time: new Date(cols[0]).getTime(),
-      open: parseFloat(cols[1]),
-      high: parseFloat(cols[2]),
-      low: parseFloat(cols[3]),
-      close: parseFloat(cols[4]),
-      volume: parseFloat(cols[6] || '0')
+      open,
+      high,
+      low,
+      close,
+      volume: parseFloat(cols[volIdx] || '0')
     });
   }
   
