@@ -1,4 +1,4 @@
-import { calculateEMA, calculateRSI, calculateATR, calculateADX } from './indicators';
+import { calculateEMA, calculateRSI, calculateATR, calculateADX, calculateBollingerBands, calculateStochastic } from './indicators';
 import type { Kline } from '../api/binance';
 
 export interface BacktestResult {
@@ -145,6 +145,9 @@ export function runBacktest(
   const atr14 = calculateATR(highs, lows, closes, 14);
   const adxD = calculateADX(highs, lows, closes, 14);
 
+  const bb20 = calculateBollingerBands(closes, 20, 2);
+  const stoch = calculateStochastic(highs, lows, closes, 14, 3, 3);
+
   // Start loop from index 200 (to ensure EMA200 is warm)
   for (let i = 200; i < klines.length; i++) {
     const k = klines[i];
@@ -162,64 +165,133 @@ export function runBacktest(
     equityCurve.push({ time: timeStr, equity: currentEquity });
 
     if (!inTrade) {
+      const cPrice = k.close;
+      const lAdx = adxD[i];
+      if (lAdx === null || lAdx === undefined) continue;
+
+      const regime = lAdx >= 20 ? 'TRENDING' : 'SIDEWAY';
+
       // --- Entry Logic ---
       if (strategy === 'Crypto') {
-        const cPrice = k.close;
         const e200 = ema200[i];
         const e5 = ema5[i];
         const r2 = rsi2[i];
         const a7 = atr7[i];
+        const lBBLower = bb20.lower[i];
+        const lBBUpper = bb20.upper[i];
+        const lBBMiddle = bb20.middle[i];
+        const lStochK = stoch.k[i];
 
-        if (e200 && e5 && r2 && a7) {
-          if (cPrice > e200 && cPrice < e5 && r2 < 20) {
-            inTrade = true;
-            tradeDirection = 'BUY';
-            entryPrice = cPrice;
-            entryTimeStr = timeStr;
-            const atrStop = cPrice - (a7 * 1.5);
-            stopLoss = Math.max(prevK.low, atrStop);
-            
-            riskAmount = capital * (riskPct / 100);
-            const dist = Math.abs(entryPrice - stopLoss);
-            positionSize = dist > 0 ? riskAmount / dist : 0;
+        if (regime === 'TRENDING') {
+          if (e200 && e5 && r2 && a7) {
+            if (cPrice > e200 && cPrice < e5 && r2 < 20) {
+              inTrade = true;
+              tradeDirection = 'BUY';
+              entryPrice = cPrice;
+              entryTimeStr = timeStr;
+              const atrStop = cPrice - (a7 * 1.5);
+              stopLoss = Math.max(prevK.low, atrStop);
+              takeProfit = 0; // Dynamic exit
+              
+              riskAmount = capital * (riskPct / 100);
+              const dist = Math.abs(entryPrice - stopLoss);
+              positionSize = dist > 0 ? riskAmount / dist : 0;
+            }
           }
+        } else if (regime === 'SIDEWAY') {
+           if (lBBLower && lBBUpper && lBBMiddle && lStochK) {
+             if (cPrice <= lBBLower && lStochK < 20) {
+               inTrade = true;
+               tradeDirection = 'BUY';
+               entryPrice = cPrice;
+               entryTimeStr = timeStr;
+               stopLoss = cPrice - (a7 || cPrice * 0.02);
+               takeProfit = lBBMiddle;
+               
+               riskAmount = capital * (riskPct / 100);
+               const dist = Math.abs(entryPrice - stopLoss);
+               positionSize = dist > 0 ? riskAmount / dist : 0;
+             } else if (cPrice >= lBBUpper && lStochK > 80) {
+               inTrade = true;
+               tradeDirection = 'SELL';
+               entryPrice = cPrice;
+               entryTimeStr = timeStr;
+               stopLoss = cPrice + (a7 || cPrice * 0.02);
+               takeProfit = lBBMiddle;
+               
+               riskAmount = capital * (riskPct / 100);
+               const dist = Math.abs(entryPrice - stopLoss);
+               positionSize = dist > 0 ? riskAmount / dist : 0;
+             }
+           }
         }
       } else {
         // Forex (Daily)
-        const cPrice = k.close;
         const e50 = ema50[i];
         const e200 = ema200[i];
         const r14 = rsi14[i];
         const prevR14 = rsi14[i-1];
         const a14 = atr14[i];
+        
+        const lBBLower = bb20.lower[i];
+        const lBBUpper = bb20.upper[i];
+        const lBBMiddle = bb20.middle[i];
+        const lStochK = stoch.k[i];
 
-        if (e50 && e200 && r14 && prevR14 && a14 && adxD) {
-          const trendUp = cPrice > e50 && e50 > e200;
-          const trendDown = cPrice < e50 && e50 < e200;
-          const hasTrendStrength = adxD[i] > 20;
+        if (regime === 'TRENDING') {
+          if (e50 && e200 && r14 && prevR14 && a14) {
+            const trendUp = cPrice > e50 && e50 > e200;
+            const trendDown = cPrice < e50 && e50 < e200;
 
-          if (trendUp && hasTrendStrength && prevR14 >= 35 && prevR14 <= 55 && r14 > prevR14) {
-            inTrade = true;
-            tradeDirection = 'BUY';
-            entryPrice = cPrice;
-            entryTimeStr = timeStr;
-            const dist = a14 * 1.5;
-            stopLoss = cPrice - dist;
-            takeProfit = cPrice + (dist * 2);
-            riskAmount = capital * (riskPct / 100);
-            positionSize = dist > 0 ? riskAmount / dist : 0;
-          } 
-          else if (trendDown && hasTrendStrength && prevR14 >= 45 && prevR14 <= 65 && r14 < prevR14) {
-            inTrade = true;
-            tradeDirection = 'SELL';
-            entryPrice = cPrice;
-            entryTimeStr = timeStr;
-            const dist = a14 * 1.5;
-            stopLoss = cPrice + dist;
-            takeProfit = cPrice - (dist * 2);
-            riskAmount = capital * (riskPct / 100);
-            positionSize = dist > 0 ? riskAmount / dist : 0;
+            if (trendUp && prevR14 >= 35 && prevR14 <= 55 && r14 > prevR14) {
+              inTrade = true;
+              tradeDirection = 'BUY';
+              entryPrice = cPrice;
+              entryTimeStr = timeStr;
+              const dist = a14 * 1.5;
+              stopLoss = cPrice - dist;
+              takeProfit = cPrice + (dist * 2);
+              riskAmount = capital * (riskPct / 100);
+              positionSize = dist > 0 ? riskAmount / dist : 0;
+            } 
+            else if (trendDown && prevR14 >= 45 && prevR14 <= 65 && r14 < prevR14) {
+              inTrade = true;
+              tradeDirection = 'SELL';
+              entryPrice = cPrice;
+              entryTimeStr = timeStr;
+              const dist = a14 * 1.5;
+              stopLoss = cPrice + dist;
+              takeProfit = cPrice - (dist * 2);
+              riskAmount = capital * (riskPct / 100);
+              positionSize = dist > 0 ? riskAmount / dist : 0;
+            }
           }
+        } else if (regime === 'SIDEWAY') {
+           if (lBBLower && lBBUpper && lBBMiddle && lStochK) {
+             if (cPrice <= lBBLower && lStochK < 20) {
+               inTrade = true;
+               tradeDirection = 'BUY';
+               entryPrice = cPrice;
+               entryTimeStr = timeStr;
+               stopLoss = cPrice - (a14 || 0.001);
+               takeProfit = lBBMiddle;
+               
+               riskAmount = capital * (riskPct / 100);
+               const dist = Math.abs(entryPrice - stopLoss);
+               positionSize = dist > 0 ? riskAmount / dist : 0;
+             } else if (cPrice >= lBBUpper && lStochK > 80) {
+               inTrade = true;
+               tradeDirection = 'SELL';
+               entryPrice = cPrice;
+               entryTimeStr = timeStr;
+               stopLoss = cPrice + (a14 || 0.001);
+               takeProfit = lBBMiddle;
+               
+               riskAmount = capital * (riskPct / 100);
+               const dist = Math.abs(entryPrice - stopLoss);
+               positionSize = dist > 0 ? riskAmount / dist : 0;
+             }
+           }
         }
       }
     } else {
@@ -229,15 +301,32 @@ export function runBacktest(
       let status: 'win' | 'loss' = 'loss';
 
       if (strategy === 'Crypto') {
-        // Crypto Exit: SL or RSI2 > 70
-        if (k.low <= stopLoss) {
-          exitPrice = stopLoss;
-          closed = true;
-          status = 'loss';
-        } else if (rsi2[i] > 70) {
-          exitPrice = k.close; // exit at close
-          closed = true;
-          status = exitPrice > entryPrice ? 'win' : 'loss';
+        // Crypto Exit: SL or TP or RSI2 > 70 (if TP is 0)
+        if (tradeDirection === 'BUY') {
+          if (k.low <= stopLoss) {
+            exitPrice = stopLoss;
+            closed = true;
+            status = 'loss';
+          } else if (takeProfit > 0 && k.high >= takeProfit) {
+            exitPrice = takeProfit;
+            closed = true;
+            status = 'win';
+          } else if (takeProfit === 0 && rsi2[i] > 70) {
+            exitPrice = k.close; 
+            closed = true;
+            status = exitPrice > entryPrice ? 'win' : 'loss';
+          }
+        } else {
+           // SELL (Crypto Sideway)
+           if (k.high >= stopLoss) {
+             exitPrice = stopLoss;
+             closed = true;
+             status = 'loss';
+           } else if (k.low <= takeProfit) {
+             exitPrice = takeProfit;
+             closed = true;
+             status = 'win';
+           }
         }
       } else {
         // Forex Exit: SL or TP

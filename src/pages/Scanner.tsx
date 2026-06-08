@@ -180,6 +180,14 @@ export default function Scanner() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h4 className={clsx("font-bold text-lg", hasSignal && "group-hover:text-blue-400 transition-colors")}>{res.symbol}</h4>
+                    {('regime' in res) && res.regime && (
+                      <span className={clsx(
+                        "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm mt-0.5 block w-fit",
+                        res.regime === 'TRENDING' ? "bg-blue-500/20 text-blue-400" : "bg-orange-500/20 text-orange-400"
+                      )}>
+                        {res.regime}
+                      </span>
+                    )}
                     {mode === 'Forex' && hasSignal && ('adxScore' in res) && res.adxScore && (
                       <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                         ADX Score: <span className={clsx("font-bold", res.adxScore > 25 ? "text-blue-400" : "text-slate-500")}>{res.adxScore.toFixed(1)}</span>

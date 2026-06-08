@@ -155,3 +155,75 @@ export function calculateADX(highs: number[], lows: number[], closes: number[], 
 
   return adx;
 }
+
+export function calculateBollingerBands(closes: number[], period: number, stdDev: number): { upper: number[], middle: number[], lower: number[] } {
+  const upper = new Array(closes.length).fill(null);
+  const middle = new Array(closes.length).fill(null);
+  const lower = new Array(closes.length).fill(null);
+
+  if (closes.length < period) return { upper, middle, lower };
+
+  for (let i = period - 1; i < closes.length; i++) {
+    let sum = 0;
+    for (let j = 0; j < period; j++) {
+      sum += closes[i - j];
+    }
+    const sma = sum / period;
+    
+    let varianceSum = 0;
+    for (let j = 0; j < period; j++) {
+      varianceSum += Math.pow(closes[i - j] - sma, 2);
+    }
+    const variance = varianceSum / period;
+    const sd = Math.sqrt(variance);
+
+    middle[i] = sma;
+    upper[i] = sma + (stdDev * sd);
+    lower[i] = sma - (stdDev * sd);
+  }
+
+  return { upper, middle, lower };
+}
+
+export function calculateStochastic(highs: number[], lows: number[], closes: number[], periodK: number, smoothK: number, smoothD: number): { k: number[], d: number[] } {
+  const kLine = new Array(closes.length).fill(null);
+  const dLine = new Array(closes.length).fill(null);
+  const fastK = new Array(closes.length).fill(null);
+
+  if (closes.length < periodK) return { k: kLine, d: dLine };
+
+  for (let i = periodK - 1; i < closes.length; i++) {
+    let highestHigh = highs[i];
+    let lowestLow = lows[i];
+    for (let j = 1; j < periodK; j++) {
+      if (highs[i - j] > highestHigh) highestHigh = highs[i - j];
+      if (lows[i - j] < lowestLow) lowestLow = lows[i - j];
+    }
+    
+    if (highestHigh === lowestLow) {
+      fastK[i] = 100;
+    } else {
+      fastK[i] = ((closes[i] - lowestLow) / (highestHigh - lowestLow)) * 100;
+    }
+  }
+
+  // Smooth %K
+  for (let i = periodK - 1 + smoothK - 1; i < closes.length; i++) {
+    let sum = 0;
+    for (let j = 0; j < smoothK; j++) {
+      sum += fastK[i - j];
+    }
+    kLine[i] = sum / smoothK;
+  }
+
+  // Smooth %D
+  for (let i = periodK - 1 + smoothK - 1 + smoothD - 1; i < closes.length; i++) {
+    let sum = 0;
+    for (let j = 0; j < smoothD; j++) {
+      sum += kLine[i - j];
+    }
+    dLine[i] = sum / smoothD;
+  }
+
+  return { k: kLine, d: dLine };
+}
