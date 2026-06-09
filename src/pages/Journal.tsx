@@ -188,7 +188,16 @@ export default function Journal() {
     const trade = modalState.trade;
 
     if (modalState.type === 'win') {
-      const pnl = trade.expectedProfit || (trade.type === 'Forex' ? trade.riskAmount * 2 : trade.riskAmount * 1.5);
+      let pnl = 0;
+      const currentPrice = prices[trade.coin];
+      if (currentPrice && trade.positionSize) {
+        const rawPnl = trade.direction === 'BUY'
+          ? (currentPrice - trade.entryPrice) * trade.positionSize
+          : (trade.entryPrice - currentPrice) * trade.positionSize;
+        pnl = rawPnl * 34;
+      } else {
+        pnl = trade.expectedProfit || (trade.type === 'Forex' ? trade.riskAmount * 2 : trade.riskAmount * 1.5);
+      }
       const updated = { ...trade, status: 'win' as const, pnl };
       await updateTrade(updated);
       updateCapitalAfterTrade(trade.type, pnl);
@@ -304,7 +313,7 @@ export default function Journal() {
                     </div>
 
                     {/* Exit Conditions Alert */}
-                    {t.type === 'Crypto' && t.status === 'active' && exitIndicators[t.coin]?.rsi2 !== undefined && (
+                    {t.type === 'Crypto' && t.status === 'active' && t.takeProfit === 0 && exitIndicators[t.coin]?.rsi2 !== undefined && (
                       <div className={clsx(
                         "mt-3 rounded-lg p-3 flex justify-between items-center text-xs border font-bold",
                         exitIndicators[t.coin]!.rsi2! > 70 
